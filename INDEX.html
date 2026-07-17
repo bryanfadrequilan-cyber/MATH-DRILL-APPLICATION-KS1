@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick Fire Maths — KS1 Drill Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --chalkboard:#1F3A34;
+    --chalkboard-dark:#162924;
+    --paper:#FBF7EE;
+    --paper-dim:#EFE8D8;
+    --ink:#25322E;
+    --add:#FFC94A;
+    --sub:#FF6F59;
+    --mul:#4F9DDE;
+    --div:#4CAF7D;
+    --shadow: 0 8px 0 rgba(0,0,0,0.15);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Nunito',sans-serif;
+    background:var(--chalkboard);
+    color:var(--paper);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
+
+  .screen{
+    display:none;
+    min-height:100vh;
+    width:100%;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:40px 20px;
+    position:relative;
+  }
+  .screen.active{display:flex;}
+
+  /* chalk dust texture */
+  .screen::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.035) 0, transparent 3%),
+      radial-gradient(circle at 85% 30%, rgba(255,255,255,0.03) 0, transparent 4%),
+      radial-gradient(circle at 40% 80%, rgba(255,255,255,0.03) 0, transparent 3%),
+      radial-gradient(circle at 70% 65%, rgba(255,255,255,0.025) 0, transparent 3%);
+    pointer-events:none;
+  }
+
+  /* ---------- LANDING ---------- */
+  .eyebrow{
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    font-size:13px;
+    font-weight:700;
+    color:var(--add);
+    margin-bottom:14px;
+  }
+  .headline{
+    font-size:clamp(34px,6vw,60px);
+    font-weight:800;
+    text-align:center;
+    line-height:1.05;
+    margin:0 0 18px;
+    color:var(--paper);
+  }
+  .headline span{color:var(--add);}
+  .sub{
+    max-width:560px;
+    text-align:center;
+    font-size:17px;
+    line-height:1.6;
+    color:#D9E4DF;
+    margin-bottom:36px;
+  }
+
+  .cards{
+    display:flex;
+    gap:14px;
+    margin-bottom:44px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .flashcard{
+    width:76px;height:96px;
+    background:var(--paper);
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Baloo 2',sans-serif;
+    font-size:38px;font-weight:700;
+    color:var(--ink);
+    box-shadow:var(--shadow);
+    transform:rotate(var(--rot));
+    transition:transform .25s ease;
+  }
+  .flashcard:hover{transform:rotate(0deg) translateY(-6px);}
+  .flashcard.c1{--rot:-8deg;color:#B8860B;}
+  .flashcard.c2{--rot:-3deg;color:#C0392B;}
+  .flashcard.c3{--rot:4deg;color:#2E6DA4;}
+  .flashcard.c4{--rot:9deg;color:#2E8B57;}
+
+  .start-btn{
+    width:150px;height:150px;
+    border-radius:50%;
+    background:var(--add);
+    border:none;
+    box-shadow:0 10px 0 #C9971E, 0 16px 24px rgba(0,0,0,0.35);
+    color:var(--ink);
+    font-family:'Baloo 2',sans-serif;
+    font-size:22px;
+    font-weight:800;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .start-btn:active{
+    transform:translateY(6px);
+    box-shadow:0 4px 0 #C9971E, 0 8px 16px rgba(0,0,0,0.3);
+  }
+  .start-btn small{font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;}
+  .footer-note{
+    margin-top:40px;
+    font-size:13px;
+    color:#8FA39C;
+    text-align:center;
+  }
+
+  /* ---------- SETUP ---------- */
+  .panel{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:20px;
+    padding:36px;
+    max-width:560px;
+    width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .panel h2{margin:0 0 6px;font-size:26px;}
+  .panel p.hint{margin:0 0 26px;color:#5B6A64;font-size:14px;}
+  .field-label{
+    font-weight:800;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:#5B6A64;
+    margin:22px 0 10px;
+  }
+  .op-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+  .op-tile{
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:16px 8px;
+    text-align:center;
+    cursor:pointer;
+    font-family:'Baloo 2',sans-serif;
+    font-size:30px;
+    font-weight:700;
+    color:#fff;
+    background:var(--tile-color);
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .op-tile span{display:block;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;margin-top:4px;}
+  .op-tile:hover{transform:translateY(-3px);}
+  .op-tile.selected{border-color:var(--ink);}
+  .op-tile[data-op="add"]{--tile-color:var(--add);color:#5C4300;}
+  .op-tile[data-op="sub"]{--tile-color:var(--sub);color:#4A0F06;}
+  .op-tile[data-op="mul"]{--tile-color:var(--mul);color:#0B2C47;}
+  .op-tile[data-op="div"]{--tile-color:var(--div);color:#0B3A22;}
+
+  .diff-row{display:flex;gap:10px;}
+  .diff-tab{
+    flex:1;
+    text-align:center;
+    padding:12px 6px;
+    border-radius:12px;
+    border:2px solid var(--paper-dim);
+    background:var(--paper-dim);
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+  }
+  .diff-tab.selected{
+    background:var(--chalkboard);
+    color:var(--paper);
+    border-color:var(--chalkboard);
+  }
+
+  .count-row{display:flex;gap:10px;}
+  .count-tab{
+    flex:1;text-align:center;padding:10px 6px;border-radius:12px;
+    border:2px solid var(--paper-dim);background:var(--paper-dim);
+    cursor:pointer;font-weight:700;font-size:14px;
+  }
+  .count-tab.selected{background:var(--mul);color:#fff;border-color:var(--mul);}
+
+  .go-btn{
+    margin-top:30px;
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:14px;
+    background:var(--chalkboard);
+    color:var(--paper);
+    font-family:'Baloo 2',sans-serif;
+    font-size:19px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 6px 0 var(--chalkboard-dark);
+  }
+  .go-btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--chalkboard-dark);}
+  .go-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .back-link{
+    display:inline-block;margin-top:16px;color:#8FA39C;font-size:13px;
+    cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit;
+  }
+
+  /* ---------- DRILL ---------- */
+  .drill-top{
+    width:100%;max-width:640px;
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:20px;font-weight:700;font-size:15px;color:#C7D6D0;
+  }
+  .op-pill{
+    padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  .sound-toggle{
+    background:none;border:2px solid #3E5850;color:var(--paper);
+    border-radius:999px;width:34px;height:34px;font-size:15px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .sound-toggle.muted{opacity:.45;}
+  .equation-row{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    margin-bottom:28px;flex-wrap:wrap;
+  }
+  .equation-row .equation{margin-bottom:0;}
+  .speaker-btn{
+    background:var(--mul);border:none;color:#fff;
+    width:44px;height:44px;border-radius:50%;font-size:19px;
+    cursor:pointer;box-shadow:0 4px 0 #326E9C;flex-shrink:0;
+  }
+  .speaker-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #326E9C;}
+  .question-card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:24px;
+    padding:56px 40px;
+    width:100%;max-width:640px;
+    text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+    transition:background .15s ease;
+  }
+  .question-card.correct{background:#DFF3E4;}
+  .question-card.wrong{background:#FBE0DC;}
+  .equation{
+    font-family:'Baloo 2',sans-serif;
+    font-size:clamp(38px,7vw,56px);
+    font-weight:700;
+    margin-bottom:28px;
+    letter-spacing:.02em;
+  }
+  #answer-input{
+    width:160px;
+    font-size:32px;
+    font-family:'Baloo 2',sans-serif;
+    text-align:center;
+    padding:10px;
+    border-radius:12px;
+    border:3px solid var(--paper-dim);
+    outline:none;
+  }
+  #answer-input:focus{border-color:var(--mul);}
+  .feedback-msg{
+    min-height:26px;
+    margin-top:14px;
+    font-weight:800;
+    font-size:16px;
+  }
+  .feedback-msg.correct{color:#2E8B57;}
+  .feedback-msg.wrong{color:#C0392B;}
+  .drill-actions{
+    margin-top:26px;
+    display:flex;
+    gap:12px;
+    justify-content:center;
+  }
+  .btn{
+    padding:12px 26px;
+    border-radius:12px;
+    border:none;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--chalkboard);color:var(--paper);box-shadow:0 5px 0 var(--chalkboard-dark);}
+  .btn-primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--chalkboard-dark);}
+  .btn-primary:disabled{opacity:.35;cursor:not-allowed;}
+  .dots{display:flex;gap:6px;margin-top:26px;flex-wrap:wrap;justify-content:center;max-width:640px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#3E5850;}
+  .dot.answered-correct{background:var(--div);}
+  .dot.answered-wrong{background:var(--sub);}
+  .dot.current{outline:2px solid var(--add);outline-offset:2px;}
+
+  /* ---------- RESULTS ---------- */
+  .results-card{
+    background:var(--paper);color:var(--ink);
+    border-radius:24px;padding:48px 40px;
+    max-width:520px;width:100%;text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .score-big{
+    font-family:'Baloo 2',sans-serif;
+    font-size:64px;font-weight:800;
+    margin:6px 0 2px;
+  }
+  .score-pct{font-size:18px;font-weight:700;color:#5B6A64;margin-bottom:18px;}
+  .encourage{font-size:16px;margin-bottom:26px;color:#3B4A44;}
+  .results-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .btn-secondary{background:var(--paper-dim);color:var(--ink);}
+  .btn-print{background:var(--mul);color:#fff;}
+
+  .id-fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:24px;
+    text-align:left;
+  }
+  .id-field:last-child{grid-column:1 / -1;}
+  .id-field label{
+    display:block;
+    font-size:12px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:#5B6A64;
+    margin-bottom:5px;
+  }
+  .id-field input{
+    width:100%;
+    font-family:'Nunito',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    padding:10px 12px;
+    border-radius:10px;
+    border:2px solid var(--paper-dim);
+    outline:none;
+    background:#fff;
+  }
+  .id-field input:focus{border-color:var(--mul);}
+
+  .review-wrap{
+    text-align:left;
+    margin-bottom:28px;
+    border-top:2px dashed var(--paper-dim);
+    padding-top:20px;
+  }
+  .review-title{
+    font-family:'Baloo 2',sans-serif;
+    font-size:18px;font-weight:700;
+    margin-bottom:12px;
+  }
+  .review-list{
+    max-height:260px;
+    overflow-y:auto;
+    border-radius:14px;
+    border:1px solid var(--paper-dim);
+  }
+  .review-row{
+    display:grid;
+    grid-template-columns:28px 1fr auto;
+    gap:10px;
+    align-items:center;
+    padding:10px 14px;
+    font-size:14px;
+    border-bottom:1px solid var(--paper-dim);
+  }
+  .review-row:last-child{border-bottom:none;}
+  .review-row.wrong{background:#FBE0DC33;}
+  .review-num{font-weight:800;color:#8A968F;}
+  .review-eq{font-family:'Baloo 2',sans-serif;font-size:16px;}
+  .review-eq small{
+    display:block;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;
+    margin-top:2px;
+  }
+  .review-eq small.pupil-wrong{color:#C0392B;}
+  .review-eq small.pupil-correct{color:#2E8B57;}
+  .review-badge{
+    font-size:18px;
+  }
+
+  /* ---------- PRINT ---------- */
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{
+      display:block !important;
+      position:absolute;left:0;top:0;width:100%;
+      background:#fff;color:#000;padding:24px;
+    }
+    #print-area h1{font-family:'Baloo 2',sans-serif;font-size:24px;margin:0 0 4px;}
+    #print-area .print-meta{font-size:13px;margin-bottom:14px;color:#333;}
+    #print-area .print-idblock{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:22px 40px;
+      font-size:14px;
+      margin-bottom:22px;
+      padding:14px 0 20px;
+      border-top:1px solid #999;
+      border-bottom:1px solid #999;
+    }
+    #print-area .print-idblock .id-item{display:flex;flex-direction:column;}
+    #print-area .print-idblock .id-label{font-weight:700;margin-bottom:10px;}
+    #print-area .print-idblock .fill-line{
+      display:inline-block;min-width:100%;min-height:20px;
+      border-bottom:1px solid #000;padding-bottom:6px;
+    }
+    #print-area table{width:100%;border-collapse:collapse;font-size:13px;}
+    #print-area th, #print-area td{border:1px solid #999;padding:6px 8px;text-align:left;}
+    #print-area th{background:#eee;}
+    #print-area .print-wrong{color:#B02418;font-weight:700;}
+    #print-area .print-correct{color:#1B7A43;}
+  }
+
+  @media (max-width:480px){
+    .op-grid{grid-template-columns:repeat(2,1fr);}
+    .question-card{padding:40px 22px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LANDING SCREEN -->
+<section class="screen active" id="screen-landing">
+  <div class="eyebrow">For Key Stage 1 Classrooms</div>
+  <h1 class="headline">Quick Fire <span>Maths</span></h1>
+  <p class="sub">A no-fuss drill tool for KS1 teachers. Warm up the whole class, run a small group session, or let a pupil practise independently — pick an operation, set the difficulty, and go.</p>
+
+  <div class="cards">
+    <div class="flashcard c1">+</div>
+    <div class="flashcard c2">−</div>
+    <div class="flashcard c3">×</div>
+    <div class="flashcard c4">÷</div>
+  </div>
+
+  <button class="start-btn" id="btn-to-setup" aria-label="Start a drill">
+    START<br><small>TAP TO BEGIN</small>
+  </button>
+
+  <p class="footer-note">Choose your operation and difficulty on the next screen</p>
+</section>
+
+<!-- SETUP SCREEN -->
+<section class="screen" id="screen-setup">
+  <div class="panel">
+    <h2>Set up your drill</h2>
+    <p class="hint">Pick one operation, a difficulty level, and how many questions you need.</p>
+
+    <div class="field-label">Operation</div>
+    <div class="op-grid" id="op-grid">
+      <div class="op-tile" data-op="add">+<span>Add</span></div>
+      <div class="op-tile" data-op="sub">−<span>Subtract</span></div>
+      <div class="op-tile" data-op="mul">×<span>Multiply</span></div>
+      <div class="op-tile" data-op="div">÷<span>Divide</span></div>
+    </div>
+
+    <div class="field-label">Difficulty</div>
+    <div class="diff-row" id="diff-row">
+      <div class="diff-tab" data-diff="easy">Easy<br><small style="font-weight:400;">numbers to 10</small></div>
+      <div class="diff-tab" data-diff="average">Average<br><small style="font-weight:400;">numbers to 20</small></div>
+      <div class="diff-tab" data-diff="difficult">Difficult<br><small style="font-weight:400;">numbers to 100</small></div>
+    </div>
+
+    <div class="field-label">Number of Questions</div>
+    <div class="count-row" id="count-row">
+      <div class="count-tab" data-count="10">10</div>
+      <div class="count-tab" data-count="15">15</div>
+      <div class="count-tab" data-count="20">20</div>
+    </div>
+
+    <button class="go-btn" id="btn-start-drill" disabled>Start Drill</button>
+    <div style="text-align:center;"><button class="back-link" id="btn-back-landing">← Back to home</button></div>
+  </div>
+</section>
+
+<!-- DRILL SCREEN -->
+<section class="screen" id="screen-drill">
+  <div class="drill-top">
+    <span id="drill-op-pill" class="op-pill">Addition</span>
+    <span id="drill-progress">Question 1 of 10</span>
+    <button class="sound-toggle" id="btn-sound-toggle" aria-label="Toggle sound">🔊</button>
+    <span id="drill-score">Score: 0</span>
+  </div>
+
+  <div class="question-card" id="question-card">
+    <div class="equation-row">
+      <div class="equation" id="equation-text">4 + 5 = ?</div>
+      <button class="speaker-btn" id="btn-hear" aria-label="Hear the question">🔊</button>
+    </div>
+    <input type="text" inputmode="numeric" id="answer-input" placeholder="?" autocomplete="off">
+    <div class="feedback-msg" id="feedback-msg"></div>
+    <div class="drill-actions">
+      <button class="btn btn-primary" id="btn-check">Check</button>
+      <button class="btn btn-primary" id="btn-next" style="display:none;">Next →</button>
+    </div>
+  </div>
+
+  <div class="dots" id="drill-dots"></div>
+</section>
+
+<!-- RESULTS SCREEN -->
+<section class="screen" id="screen-results">
+  <div class="results-card">
+    <div class="field-label" style="margin-top:0;">Drill complete</div>
+    <div class="score-big" id="result-score">8 / 10</div>
+    <div class="score-pct" id="result-pct">80% correct</div>
+    <div class="encourage" id="result-msg">Great effort — a couple more goes and this will be second nature!</div>
+
+    <div class="id-fields">
+      <div class="id-field">
+        <label for="input-pupil-name">Pupil's Name</label>
+        <input type="text" id="input-pupil-name" placeholder="e.g. Maria Santos">
+      </div>
+      <div class="id-field">
+        <label for="input-class">Class</label>
+        <input type="text" id="input-class" placeholder="e.g. Year 1B">
+      </div>
+      <div class="id-field">
+        <label for="input-teacher-name">Teacher's Name</label>
+        <input type="text" id="input-teacher-name" placeholder="e.g. Ms. Reyes">
+      </div>
+    </div>
+
+    <div class="review-wrap">
+      <div class="review-title">Answers &amp; Solutions</div>
+      <div class="review-list" id="review-list"></div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn btn-print" id="btn-print">🖨 Print Results</button>
+      <button class="btn btn-primary" id="btn-retry-same">Try Again</button>
+      <button class="btn btn-secondary" id="btn-new-settings">New Settings</button>
+      <button class="btn btn-secondary" id="btn-home">Home</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRINT-ONLY AREA (populated by JS, only visible when printing) -->
+<div id="print-area"></div>
+
+<script>
+(function(){
+  const screens = {
+    landing: document.getElementById('screen-landing'),
+    setup: document.getElementById('screen-setup'),
+    drill: document.getElementById('screen-drill'),
+    results: document.getElementById('screen-results'),
+  };
+  function showScreen(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  const opLabels = { add:'Addition', sub:'Subtraction', mul:'Multiplication', div:'Division' };
+  const opSymbols = { add:'+', sub:'−', mul:'×', div:'÷' };
+
+  let state = {
+    operation: null,
+    difficulty: null,
+    totalQuestions: null,
+    current: 0,
+    score: 0,
+    questions: [],
+    results: [], // 'correct' | 'wrong' per question
+    answers: [],  // { text, pupilAnswer, correctAnswer, isCorrect } per question
+    soundOn: true
+  };
+
+  /* ---------- SETUP SCREEN INTERACTIONS ---------- */
+  const opGrid = document.getElementById('op-grid');
+  const diffRow = document.getElementById('diff-row');
+  const countRow = document.getElementById('count-row');
+  const startDrillBtn = document.getElementById('btn-start-drill');
+
+  function checkSetupComplete(){
+    startDrillBtn.disabled = !(state.operation && state.difficulty && state.totalQuestions);
+  }
+
+  opGrid.querySelectorAll('.op-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      opGrid.querySelectorAll('.op-tile').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+      state.operation = tile.dataset.op;
+      checkSetupComplete();
+    });
+  });
+
+  diffRow.querySelectorAll('.diff-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      diffRow.querySelectorAll('.diff-tab').forEach(t => t.classList.remove('selected'));
+      tab.classList.add('selected');
+      state.difficulty = tab.dataset.diff;
+      checkSetupComplete();
+    });
+  });
+
+  countRow.querySelectorAll('.count-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      countRow.querySelectorAll('.count-tab').forEach(t => t.classList.remove('selected'));
+      tab.classList.add('selected');
+      state.totalQuestions = parseInt(tab.dataset.count, 10);
+      checkSetupComplete();
+    });
+  });
+
+  document.getElementById('btn-to-setup').addEventListener('click', () => showScreen('setup'));
+  document.getElementById('btn-back-landing').addEventListener('click', () => showScreen('landing'));
+
+  document.getElementById('btn-start-drill').addEventListener('click', () => {
+    beginDrill();
+  });
+
+  /* ---------- QUESTION GENERATION ---------- */
+  function randInt(min, max){
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateQuestion(op, difficulty){
+    if(op === 'add'){
+      let a,b;
+      if(difficulty === 'easy'){ a = randInt(1,10); b = randInt(1,10); }
+      else if(difficulty === 'average'){ a = randInt(1,20); b = randInt(1,20); }
+      else { a = randInt(10,90); b = randInt(1,90-a<10?10:90); b = randInt(1, Math.max(1,100-a)); }
+      return { text: `${a} + ${b}`, answer: a+b };
+    }
+    if(op === 'sub'){
+      let a,b;
+      if(difficulty === 'easy'){ a = randInt(1,10); b = randInt(0,a); }
+      else if(difficulty === 'average'){ a = randInt(1,20); b = randInt(0,a); }
+      else { a = randInt(10,100); b = randInt(0,a); }
+      return { text: `${a} − ${b}`, answer: a-b };
+    }
+    if(op === 'mul'){
+      let a,b;
+      if(difficulty === 'easy'){ a = randInt(1,5); b = randInt(1,5); }
+      else if(difficulty === 'average'){ const t=[2,5,10]; a = t[randInt(0,2)]; b = randInt(1,10); }
+      else { const t=[2,3,4,5,10]; a = t[randInt(0,4)]; b = randInt(1,12); }
+      return { text: `${a} × ${b}`, answer: a*b };
+    }
+    if(op === 'div'){
+      let divisor, quotient, dividend;
+      if(difficulty === 'easy'){ divisor = randInt(1,5); quotient = randInt(1,5); }
+      else if(difficulty === 'average'){ const t=[2,5,10]; divisor = t[randInt(0,2)]; quotient = randInt(1,10); }
+      else { const t=[2,3,4,5,10]; divisor = t[randInt(0,4)]; quotient = randInt(1,12); }
+      dividend = divisor * quotient;
+      return { text: `${dividend} ÷ ${divisor}`, answer: quotient };
+    }
+  }
+
+  function buildQuestionSet(op, difficulty, count){
+    const qs = [];
+    for(let i=0;i<count;i++){
+      qs.push(generateQuestion(op, difficulty));
+    }
+    return qs;
+  }
+
+  /* ---------- DRILL SCREEN ---------- */
+  const equationText = document.getElementById('equation-text');
+  const answerInput = document.getElementById('answer-input');
+  const feedbackMsg = document.getElementById('feedback-msg');
+  const questionCard = document.getElementById('question-card');
+  const btnCheck = document.getElementById('btn-check');
+  const btnNext = document.getElementById('btn-next');
+  const drillProgress = document.getElementById('drill-progress');
+  const drillScore = document.getElementById('drill-score');
+  const drillOpPill = document.getElementById('drill-op-pill');
+  const drillDots = document.getElementById('drill-dots');
+  const btnSoundToggle = document.getElementById('btn-sound-toggle');
+  const btnHear = document.getElementById('btn-hear');
+
+  const opWords = { add:'plus', sub:'minus', mul:'times', div:'divided by' };
+
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.85;
+    utter.pitch = 1.05;
+    window.speechSynthesis.speak(utter);
+  }
+
+  function speakQuestionText(q){
+    const spoken = q.text.replace('+','plus').replace('−','minus').replace('×','times').replace('÷','divided by');
+    speak(`${spoken}. Equals what?`);
+  }
+
+  function speakQuestion(q){
+    if(!state.soundOn) return;
+    speakQuestionText(q);
+  }
+
+  btnSoundToggle.addEventListener('click', () => {
+    state.soundOn = !state.soundOn;
+    btnSoundToggle.textContent = state.soundOn ? '🔊' : '🔇';
+    btnSoundToggle.classList.toggle('muted', !state.soundOn);
+    if(!state.soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  });
+
+  btnHear.addEventListener('click', () => {
+    const q = state.questions[state.current];
+    if(q) speakQuestionText(q);
+  });
+
+  const pillColors = { add:'var(--add)', sub:'var(--sub)', mul:'var(--mul)', div:'var(--div)' };
+
+  function beginDrill(){
+    state.current = 0;
+    state.score = 0;
+    state.results = [];
+    state.answers = [];
+    state.questions = buildQuestionSet(state.operation, state.difficulty, state.totalQuestions);
+
+    drillOpPill.textContent = opLabels[state.operation];
+    drillOpPill.style.background = pillColors[state.operation];
+    drillOpPill.style.color = (state.operation === 'add' || state.operation === 'sub') ? '#3a2a00' : '#fff';
+
+    buildDots();
+    showScreen('drill');
+    renderQuestion();
+  }
+
+  function buildDots(){
+    drillDots.innerHTML = '';
+    for(let i=0;i<state.totalQuestions;i++){
+      const d = document.createElement('div');
+      d.className = 'dot';
+      d.id = 'dot-' + i;
+      drillDots.appendChild(d);
+    }
+  }
+
+  function updateDots(){
+    for(let i=0;i<state.totalQuestions;i++){
+      const d = document.getElementById('dot-'+i);
+      d.classList.remove('current','answered-correct','answered-wrong');
+      if(state.results[i] === 'correct') d.classList.add('answered-correct');
+      else if(state.results[i] === 'wrong') d.classList.add('answered-wrong');
+      if(i === state.current) d.classList.add('current');
+    }
+  }
+
+  function renderQuestion(){
+    const q = state.questions[state.current];
+    equationText.textContent = `${q.text} = ?`;
+    answerInput.value = '';
+    answerInput.disabled = false;
+    feedbackMsg.textContent = '';
+    feedbackMsg.className = 'feedback-msg';
+    questionCard.classList.remove('correct','wrong');
+    btnCheck.style.display = 'inline-block';
+    btnNext.style.display = 'none';
+    drillProgress.textContent = `Question ${state.current+1} of ${state.totalQuestions}`;
+    drillScore.textContent = `Score: ${state.score}`;
+    updateDots();
+    answerInput.focus();
+    speakQuestion(q);
+  }
+
+  function checkAnswer(){
+    const q = state.questions[state.current];
+    const val = answerInput.value.trim();
+    if(val === '') { answerInput.focus(); return; }
+    const isCorrect = parseInt(val, 10) === q.answer;
+
+    answerInput.disabled = true;
+    btnCheck.style.display = 'none';
+    btnNext.style.display = 'inline-block';
+
+    if(isCorrect){
+      state.score++;
+      state.results[state.current] = 'correct';
+      questionCard.classList.add('correct');
+      feedbackMsg.textContent = 'Correct! 🎉';
+      feedbackMsg.classList.add('correct');
+      if(state.soundOn) speak(`Correct! ${q.answer}.`);
+    } else {
+      state.results[state.current] = 'wrong';
+      questionCard.classList.add('wrong');
+      feedbackMsg.textContent = `Not quite — the answer is ${q.answer}`;
+      feedbackMsg.classList.add('wrong');
+      if(state.soundOn) speak(`Not quite. The answer is ${q.answer}.`);
+    }
+    state.answers[state.current] = {
+      text: q.text,
+      pupilAnswer: val,
+      correctAnswer: q.answer,
+      isCorrect: isCorrect
+    };
+    drillScore.textContent = `Score: ${state.score}`;
+    updateDots();
+
+    if(state.current === state.totalQuestions - 1){
+      btnNext.textContent = 'See Results →';
+    } else {
+      btnNext.textContent = 'Next →';
+    }
+    btnNext.focus();
+  }
+
+  function nextQuestion(){
+    if(state.current === state.totalQuestions - 1){
+      finishDrill();
+    } else {
+      state.current++;
+      renderQuestion();
+    }
+  }
+
+  btnCheck.addEventListener('click', checkAnswer);
+  btnNext.addEventListener('click', nextQuestion);
+  answerInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      if(btnCheck.style.display !== 'none'){ checkAnswer(); }
+      else { nextQuestion(); }
+    }
+  });
+
+  /* ---------- RESULTS SCREEN ---------- */
+  const resultScore = document.getElementById('result-score');
+  const resultPct = document.getElementById('result-pct');
+  const resultMsg = document.getElementById('result-msg');
+  const reviewList = document.getElementById('review-list');
+  const printArea = document.getElementById('print-area');
+
+  function equationWithAnswer(q){
+    // e.g. "14 + 8" -> "14 + 8 = 22"
+    return `${q.text} = ${q.correctAnswer}`;
+  }
+
+  function buildReviewList(){
+    reviewList.innerHTML = '';
+    state.answers.forEach((a, i) => {
+      const row = document.createElement('div');
+      row.className = 'review-row' + (a.isCorrect ? '' : ' wrong');
+
+      const num = document.createElement('div');
+      num.className = 'review-num';
+      num.textContent = i+1;
+
+      const eq = document.createElement('div');
+      eq.className = 'review-eq';
+      const pupilSpan = a.isCorrect
+        ? `<small class="pupil-correct">Pupil answered ${a.pupilAnswer} — correct</small>`
+        : `<small class="pupil-wrong">Pupil answered ${a.pupilAnswer} — solution: ${equationWithAnswer(a)}</small>`;
+      eq.innerHTML = `${a.text} = ${a.isCorrect ? a.pupilAnswer : a.correctAnswer}${pupilSpan}`;
+
+      const badge = document.createElement('div');
+      badge.className = 'review-badge';
+      badge.textContent = a.isCorrect ? '✅' : '❌';
+
+      row.appendChild(num);
+      row.appendChild(eq);
+      row.appendChild(badge);
+      reviewList.appendChild(row);
+    });
+  }
+
+  function idOrBlank(value){
+    const v = (value || '').trim();
+    return v ? v : '<span class="fill-line">&nbsp;</span>';
+  }
+
+  function buildPrintArea(pct){
+    const dateStr = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    const pupilName = document.getElementById('input-pupil-name').value;
+    const className = document.getElementById('input-class').value;
+    const teacherName = document.getElementById('input-teacher-name').value;
+
+    let rows = state.answers.map((a, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${a.text} = ?</td>
+        <td>${a.pupilAnswer}</td>
+        <td>${a.correctAnswer}</td>
+        <td class="${a.isCorrect ? 'print-correct' : 'print-wrong'}">${a.isCorrect ? 'Correct' : 'Incorrect — solution: ' + equationWithAnswer(a)}</td>
+      </tr>`).join('');
+
+    printArea.innerHTML = `
+      <h1>Quick Fire Maths — Drill Results</h1>
+      <div class="print-meta">
+        ${opLabels[state.operation]} &middot; ${state.difficulty.charAt(0).toUpperCase()+state.difficulty.slice(1)} difficulty &middot;
+        ${dateStr}<br>
+        Score: ${state.score} / ${state.totalQuestions} (${pct}% correct)
+      </div>
+      <div class="print-idblock">
+        <div class="id-item"><span class="id-label">Pupil's Name:</span> ${idOrBlank(pupilName)}</div>
+        <div class="id-item"><span class="id-label">Class:</span> ${idOrBlank(className)}</div>
+        <div class="id-item"><span class="id-label">Teacher's Name:</span> ${idOrBlank(teacherName)}</div>
+        <div class="id-item"><span class="id-label">Date:</span> <span class="fill-line">${dateStr}</span></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Question</th><th>Pupil's Answer</th><th>Correct Answer</th><th>Result / Solution</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function finishDrill(){
+    const pct = Math.round((state.score / state.totalQuestions) * 100);
+    resultScore.textContent = `${state.score} / ${state.totalQuestions}`;
+    resultPct.textContent = `${pct}% correct`;
+
+    let msg;
+    if(pct === 100) msg = "Perfect score! Every single one correct. 🌟";
+    else if(pct >= 80) msg = "Great effort — this operation is really clicking!";
+    else if(pct >= 50) msg = "Good practice — a few more drills and this will stick.";
+    else msg = "A useful warm-up round — worth revisiting this one together as a class.";
+    resultMsg.textContent = msg;
+
+    buildReviewList();
+    buildPrintArea(pct);
+
+    showScreen('results');
+  }
+
+  document.getElementById('btn-print').addEventListener('click', () => {
+    window.print();
+  });
+
+  document.getElementById('btn-retry-same').addEventListener('click', beginDrill);
+  document.getElementById('btn-new-settings').addEventListener('click', () => showScreen('setup'));
+  document.getElementById('btn-home').addEventListener('click', () => {
+    // reset setup selections
+    opGrid.querySelectorAll('.op-tile').forEach(t => t.classList.remove('selected'));
+    diffRow.querySelectorAll('.diff-tab').forEach(t => t.classList.remove('selected'));
+    countRow.querySelectorAll('.count-tab').forEach(t => t.classList.remove('selected'));
+    state.operation = null; state.difficulty = null; state.totalQuestions = null;
+    checkSetupComplete();
+    document.getElementById('input-pupil-name').value = '';
+    document.getElementById('input-class').value = '';
+    document.getElementById('input-teacher-name').value = '';
+    showScreen('landing');
+  });
+})();
+</script>
+
+</body>
+</html>
